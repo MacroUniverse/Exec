@@ -15,10 +15,9 @@ int main()
 	while (true) {
 		if (!file_exist(fname.c_str())) {
 			pause(2);
+			continue;
 		}
-		else {
-			fin.open(fname);
-		}
+		fin.open(fname);
 		getline(fin, str);
 		fin.close();
 		if (str.empty())
