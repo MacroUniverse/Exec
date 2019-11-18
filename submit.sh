@@ -1,4 +1,5 @@
 #!/bin/bash
+# submit exec.x to slurm
 for ((i = 101; i <= 102; ++i))
 do
     printf "#!/bin/sh\necho ${i}.sh | ./exec.x > ${i}.out\n" > ${i}.slurm
