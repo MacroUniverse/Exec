@@ -1,7 +1,7 @@
 ## Example
 * open a shell, run
 ```
-echo "test.sh" | exec.x > test.out
+exec.x test.sh > test.out
 ```
 now the program will monitor if there's anything in `test.sh`, you can name this file whatever you like, and it doesn't need to exist. Now the program will keep checking if the file exist, and if there is anything in the first line.
 
@@ -18,3 +18,5 @@ script file: test.sh
 running: `ls -l > ls.out` ...
 returned, time used: xxxx
 ```
+
+* when the job is finished, the script file will be deleted. If it is remove by hand, the job will be killed.
