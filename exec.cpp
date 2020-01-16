@@ -19,7 +19,6 @@ void *caller(void *pfname)
 	fin.close();
 	if (str.empty()) {
 		cout << "script file is empty!" << endl;
-		remove(fname.c_str());
 		return NULL;
 	}
 	cout << "running: `" << str << "` ..." << endl;
@@ -56,8 +55,16 @@ int main(int argc, char *argv[])
 	cout << "script file: " << fname << "\n" << endl;
 	while (true) {
 		if (!file_exist(fname.c_str())) {
-			pause(2);
+			sleep(2);
 			continue;
+		}
+		else {
+			ifstream fin(fname);
+			string str; getline(fin, str); fin.close();
+			if (str.empty()) {
+				sleep(2);
+				continue;
+			}
 		}
 		
 		timer.tic();
