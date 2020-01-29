@@ -5,6 +5,7 @@
 #include <signal.h>
 #include "SLISC/time.h"
 #include "SLISC/file.h"
+#include "SLISC/linux.h"
 
 using namespace slisc;
 
@@ -14,32 +15,30 @@ void *caller(void *pfname)
 {
 	Str fname(*(Str*)pfname);
 	ifstream fin(fname);
-	Str str;
-	getline(fin, str);
+	Str cmd;
+	getline(fin, cmd);
 	fin.close();
-	if (str.empty()) {
+	if (cmd.empty()) {
 		cout << "script file is empty!" << endl;
 		return NULL;
 	}
-	cout << "running: `" << str << "` ..." << endl;
-	Int ret = system(str.c_str()); ++ret;
+	cout << "running: `" << cmd << "` ..." << endl;
+	Int ret = system(cmd.c_str()); ++ret;
 	remove(fname.c_str());
 	killed = false;
 	return NULL;
 }
 
-// return -1 if no child
-int get_child_pid(int pid)
+// sleep while keeping all threads used
+void sleep_all(Doub_I sec)
 {
-	string pid_file = "pid" + to_string(pid) + ".tmp";
-	string cmd  = "pgrep -P " + to_string(pid) + " > " + pid_file;
-	int ret = system(cmd.c_str()); ++ret;
-	ifstream fin(pid_file);
-	string pid_str; getline(fin, pid_str); fin.close(); remove(pid_file.c_str());
-	if (pid_str.empty())
-		return -1;
-	int child_pid = stoi(pid_str);
-	return child_pid;
+	Timer timer; timer.tic();
+#pragma omp parallel for schedule(dynamic)
+	for (Long i = 0; i < 2000 ; ++i) {
+		if (timer.toc() > sec)
+			continue;
+		sleep(0.2);
+	}
 }
 
 int main(int argc, char *argv[])
@@ -55,14 +54,14 @@ int main(int argc, char *argv[])
 	cout << "script file: " << fname << "\n" << endl;
 	while (true) {
 		if (!file_exist(fname.c_str())) {
-			sleep(2);
+			sleep_all(2);
 			continue;
 		}
 		else {
 			ifstream fin(fname);
 			string str; getline(fin, str); fin.close();
 			if (str.empty()) {
-				sleep(2);
+				sleep_all(2);
 				continue;
 			}
 		}
@@ -70,12 +69,14 @@ int main(int argc, char *argv[])
 		timer.tic();
 		killed = true;
 		pthread_create(&pth, NULL, caller, &fname);
-		
+		vector<Int> ch_pid;
 		while (true) {
 			sleep(5);
 			if (!file_exist(fname)) {
+				child_pid(ch_pid, getpid());
+				child_pid(ch_pid, ch_pid[0]);
 				if (killed) {
-					kill(get_child_pid(get_child_pid(getpid())), SIGKILL);
+					kill(ch_pid[0], SIGKILL);
 					cout << "killed, time used: " << timer.toc() << "\n" << endl;
 				}
 				else

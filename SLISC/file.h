@@ -1,5 +1,7 @@
 #pragma once
-#include "scalar_arith.h"
+#include "time.h"
+#include "arithmetic.h"
+#include "linux.h"
 #include <sstream>
 #include <fstream>
 #include <codecvt>
@@ -11,7 +13,7 @@ namespace slisc {
 
 using std::stringstream;
 
-inline void file_list(vector_O<Str> names, Str_I path);
+inline void file_list(vecStr_O names, Str_I path);
 
 #ifdef SLS_HAS_FILESYSTEM
 // check if a file exist on Windws (case sensitive)
@@ -27,9 +29,9 @@ inline Bool file_exist_case(Str_I fname)
         path = fname.substr(0, ind + 1);
         name = fname.substr(ind + 1);
     }
-    vector<Str> names;
+    vecStr names;
     file_list(names, path);
-    if (is_in(name, names))
+    if (search(name, names) >= 0)
         return true;
     else
         return false;
@@ -69,41 +71,26 @@ inline void file_rm(Str_I wildcard_name) {
 // list all files in current directory
 // only works for linux
 #ifdef __GNUC__
-inline void file_list(vector_O<Str> fnames, Str_I path)
-{
-    Str temp_fname, temp_fname_pref = "SLISC_temporary_file";
-
-    // create unused temporary file name
-    for (Long i = 0; i < 1000; ++i) {
-        if (i == 999)
-            SLS_ERR("too many temporary files!");
-        temp_fname = temp_fname_pref + to_string(i);
-        if (!file_exist(temp_fname)) break;
-    }
-    
+inline void file_list(vecStr_O fnames, Str_I path)
+{    
     // save a list of all files (no folder) to temporary file
-    system(("ls -p " + path + " | grep -v / > " + temp_fname).c_str());
-
+    std::istringstream iss(exec_str(("ls -p " + path + " | grep -v /").c_str()));
+    
     // read the temporary file
-    ifstream fin(temp_fname);
-    for (Long i = 0; i < 10000; ++i) {
-        Str name;
-        std::getline(fin, name);
-        if (fin.eof())
+    Str name;
+    while (true) {
+        std::getline(iss, name);
+        if (iss.eof())
             break;
         fnames.push_back(name);
     }
-    fin.close();
-
-    // remove temporary file
-    std::remove(temp_fname.c_str());
 }
 #else
 #ifdef SLS_HAS_FILESYSTEM
 // std::filesystem implementation of file_list()
 // works in Visual Studio, not gcc 8
 // directory example: "C:/Users/addis/Documents/GitHub/SLISC/"
-inline void file_list(vector_O<Str> names, Str_I path)
+inline void file_list(vecStr_O names, Str_I path)
 {
     for (const auto & entry : std::filesystem::directory_iterator(path)) {
         std::stringstream ss;
@@ -118,7 +105,7 @@ inline void file_list(vector_O<Str> names, Str_I path)
     }
 }
 #else
-inline void file_list(vector_O<Str> fnames, Str_I path)
+inline void file_list(vecStr_O fnames, Str_I path)
 {
     SLS_ERR("not implemented");
 }
@@ -126,11 +113,11 @@ inline void file_list(vector_O<Str> fnames, Str_I path)
 #endif
 
 // choose files with a given extension from a list of files
-inline void file_ext(vector_O<Str> fnames_ext, vector_I<Str> fnames, Str_I ext, Bool_I keep_ext = true)
+inline void file_ext(vecStr_O fnames_ext, vecStr_I fnames, Str_I ext, Bool_I keep_ext = true)
 {
     fnames_ext.resize(0);
     Long N_ext = ext.size();
-    for (Long i = 0; i < Size(fnames); ++i) {
+    for (Long i = 0; i < size(fnames); ++i) {
         const Str & str = fnames[i];
         // check position of '.'
         Long ind = fnames[i].size() - N_ext - 1;
@@ -147,9 +134,9 @@ inline void file_ext(vector_O<Str> fnames_ext, vector_I<Str> fnames, Str_I ext, 
 }
 
 // list all files in current directory, with a given extension
-inline void file_list_ext(vector_O<Str> fnames, Str_I path, Str_I ext, Bool_I keep_ext = true)
+inline void file_list_ext(vecStr_O fnames, Str_I path, Str_I ext, Bool_I keep_ext = true)
 {
-    vector<Str> fnames0;
+    vecStr fnames0;
     file_list(fnames0, path);
     file_ext(fnames, fnames0, ext, keep_ext);
 }
